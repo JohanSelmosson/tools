@@ -1,0 +1,126 @@
+= Cloudflare DNS Updater
+
+A bash script to automatically update Cloudflare DNS records when your public IP address changes.
+
+== Usage
+
+[source,bash]
+----
+./update_cloudflare_dns.sh [OPTIONS] DOMAIN_NAME
+----
+
+== Options
+
+[cols="1,3"]
+|===
+|Option |Description
+
+|`-e, --email EMAIL`
+|Cloudflare account email
+
+|`-c, --config FILE`
+|Configuration file (default: `$HOME/.cloudflare/config`)
+
+|`-f, --ip-file FILE`
+|File to store IP addresses (default: `$HOME/.cloudflare/lastknown_ip_addresses.txt`)
+
+|`-d, --dry-run`
+|Simulate actions without making changes
+
+|`-h, --help`
+|Display this help message
+|===
+
+== Environment Variables
+
+[cols="1,3"]
+|===
+|Variable |Description
+
+|`CF_API_KEY`
+|Cloudflare API key (required if not in config file)
+|===
+
+== Configuration File
+
+The script looks for a configuration file at `$HOME/.cloudflare/config` by default. You can specify a different file using the `-c` option.
+
+The config file should contain:
+
+[source]
+----
+email=your-cloudflare-email@example.com
+CF_API_KEY=your_cloudflare_api_key_here
+----
+
+== Examples
+
+1. Update DNS records for example.com:
++
+[source,bash]
+----
+./update_cloudflare_dns.sh example.com
+----
+
+2. Dry run for example.com:
++
+[source,bash]
+----
+./update_cloudflare_dns.sh --dry-run example.com
+----
+
+3. Use a specific config file:
++
+[source,bash]
+----
+./update_cloudflare_dns.sh -c /path/to/config example.com
+----
+
+4. Use environment variable for API key:
++
+[source,bash]
+----
+CF_API_KEY=your_api_key_here ./update_cloudflare_dns.sh -e user@example.com example.com
+----
+
+== Features
+
+* Updates both A (IPv4) and AAAA (IPv6) records
+* Adds missing AAAA records for existing A records
+* Supports dry run mode for testing
+* Sends email notifications on changes (if configured)
+* Uses local non-privacy IPv6 address
+== Automatic AAAA Record Addition
+
+The script includes a feature to automatically add missing AAAA (IPv6) records for existing A (IPv4) records. This ensures that your domain has both IPv4 and IPv6 support where applicable. Here's how it works:
+
+1. The script first updates any existing A and AAAA records with the current IPv4 and IPv6 addresses.
+
+2. It then checks all A records that point to the current IPv4 address.
+
+3. For each of these A records, it verifies if a corresponding AAAA record exists.
+
+4. If an AAAA record is missing for a hostname that has an A record pointing to the current IPv4 address, the script will automatically create a new AAAA record with the current IPv6 address.
+
+This feature helps maintain parity between your IPv4 and IPv6 DNS records, improving your domain's accessibility over both protocols. It's particularly useful when transitioning to IPv6 support or when adding new subdomains.
+
+NOTE: This automatic addition only occurs for hostnames that already have an A record pointing to your current IPv4 address. It will not create AAAA records for hostnames that don't have corresponding A records.
+
+=== Example
+
+If you have an A record for `www.example.com` pointing to your current IPv4 address, but no AAAA record for `www.example.com`, the script will automatically add an AAAA record for `www.example.com` with your current IPv6 address.
+
+This ensures that visitors can reach your website via both IPv4 and IPv6, improving accessibility and future-proofing your DNS configuration.
+
+                                        
+                                        
+== Requirements
+
+* Bash
+* curl
+* jq
+* ip command (for IPv6 address detection)
+
+== Note
+
+Ensure you have the necessary permissions to modify DNS records for your domain in Cloudflare before using this script.
